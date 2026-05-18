@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lead_distribution
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lead_distribution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/lead_distribution?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/lead_distribution?schema=public
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      SOCKET_IO_PATH: /socket.io
+      PORT: "3000"
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npx prisma db push && npx prisma db seed && npm run dev"
+
+volumes:
+  postgres_data:

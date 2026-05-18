@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ProviderStatus {
+  ACTIVE
+  PAUSED
+  SUSPENDED
+  INACTIVE
+}
+
+enum LeadStatus {
+  NEW
+  PENDING_ALLOCATION
+  ASSIGNED
+  REJECTED
+  CONVERTED
+  EXPIRED
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum WebhookEventType {
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_ACCEPTED
+  ASSIGNMENT_REJECTED
+  LEAD_CONVERTED
+}
+
+enum WebhookEventStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model Service {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  status      ServiceStatus @default(ACTIVE)
+  
+  // Service-specific settings
+  leadExpiryHours Int @default(72)
+  assignmentsPerLead Int @default(3)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  leads             Lead[]
+  providers         Provider[]
+  allocationState   AllocationState?
+  
+  @@index([status])
+}
+
+model Provider {
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  phone           String?
+  status          ProviderStatus @default(ACTIVE)
+  
+  // Quota tracking
+  monthlyQuota    Int            @default(10)
+  currentMonthAllocated Int @default(0)
+  monthResetAt    DateTime?      // when the monthly quota was last reset
+  
+  // Fair allocation fairness tracking
+  totalAllocationsAllTime Int @default(0)
+  lastAllocationAt DateTime?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  services        Service[]
+  assignments     Assignment[]
+  
+  @@index([status])
+  @@index([status, currentMonthAllocated])
+  @@index([monthResetAt])
+}
+
+model Lead {
+  id              String     @id @default(cuid())
+  serviceId       String
+  service         Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  // Customer info
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  
+  // Lead details
+  leadValue       Decimal?
+  source          String?     // where the lead came from
+  metadata        Json?
+  
+  // Status tracking
+  status          LeadStatus @default(NEW)
+  assignmentCount Int        @default(0)  // current count of assignments
+  isActive        Boolean    @default(true)
+  
+  // Lifecycle
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  expiresAt       DateTime?  // when this lead expires
+  
+  assignments     Assignment[]
+
+  // Prevent duplicate leads: same phone + same service
+  @@unique([serviceId, customerPhone], name: "idx_unique_service_phone")
+  @@index([serviceId, status])
+  @@index([status, isActive])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+model Assignment {
+  id              String             @id @default(cuid())
+  leadId          String
+  lead            Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  providerId      String
+  provider        Provider           @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  status          AssignmentStatus   @default(PENDING)
+  
+  // Tracking
+  assignedAt      DateTime           @default(now())
+  respondedAt     DateTime?
+  convertedAt     DateTime?
+  rejectedAt      DateTime?
+  expiresAt       DateTime?
+  
+  // Notes
+  notes           String?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  webhookEvents   WebhookEvent[]
+
+  // Prevent same provider receiving same lead twice
+  @@unique([leadId, providerId], name: "idx_unique_lead_provider")
+  @@index([providerId, status])
+  @@index([status, expiresAt])
+  @@index([assignedAt])
+}
+
+model AllocationState {
+  id                        String   @id @default(cuid())
+  serviceId                 String   @unique
+  service                   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  // Round-robin state for fair distribution
+  // Stores the current index in the provider list for round-robin allocation
+  lastProviderIndex         Int      @default(0)
+  
+  // JSON array of provider IDs in allocation order
+  // Used to persist the allocation sequence across server restarts
+  providerAllocationOrder   String   // JSON: string[] of provider IDs
+  
+  // Timestamp for cache invalidation
+  allocationOrderUpdatedAt  DateTime @default(now())
+  
+  updatedAt                 DateTime @updatedAt
+  
+  @@index([serviceId])
+}
+
+model WebhookEvent {
+  id              String             @id @default(cuid())
+  
+  // Idempotency: external system's event ID
+  externalId      String             @unique(map: "idx_unique_webhook_external_id")
+  
+  assignmentId    String
+  assignment      Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  eventType       WebhookEventType
+  status          WebhookEventStatus @default(PENDING)
+  
+  // Payload
+  payload         Json
+  
+  // Retry logic
+  retryCount      Int                @default(0)
+  maxRetries      Int                @default(5)
+  nextRetryAt     DateTime?
+  failedAt        DateTime?
+  succeededAt     DateTime?
+  lastError       String?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  @@index([status])
+  @@index([externalId])
+  @@index([assignmentId, status])
+  @@index([nextRetryAt])
+}
+
+model QuotaResetWebhook {
+  id                String   @id @default(cuid())
+  externalId        String   @unique(map: "idx_unique_quota_reset_external_id")
+  source            String
+  reason            String?
+  payload           Json
+  processedProviders Int
+  isDuplicate       Boolean  @default(false)
+  status            String   @default("SUCCESS")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([externalId])
+}
