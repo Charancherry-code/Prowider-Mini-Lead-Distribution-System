@@ -37,7 +37,7 @@
 - [Features](#-features)
 - [Quick Start](#-quick-start)
 - [Deployment](#-deployment)
-- [Evaluation Criteria](#-evaluation-criteria)
+
 
 ---
 
@@ -546,31 +546,6 @@ SOCKET_IO_PATH="/socket.io"
 PORT="3000"
 NODE_ENV="production"
 ```
-
-### Other Platforms
-
-| Platform | Support | Notes |
-|----------|---------|-------|
-| **Railway** | ✅ Full | Docker-native, PostgreSQL plugin |
-| **Render** | ✅ Full | Docker Web Service + Render Postgres |
-| **Fly.io** | ✅ Full | `fly launch` with Dockerfile |
-| **Vercel** | ❌ | Serverless — Socket.IO won't work |
-| **Netlify** | ❌ | Serverless — same issue |
-
----
-
-## 📊 Evaluation Criteria
-
-| Criterion | Implementation |
-|-----------|---------------|
-| ✅ **Correct provider allocation** | Mandatory rules + round-robin fair pool, enforced atomically |
-| ✅ **Data consistency under concurrency** | `SELECT FOR UPDATE` row lock + 8-retry exponential back-off |
-| ✅ **Webhook safety & idempotency** | `externalId UNIQUE` + transactional check before any writes |
-| ✅ **Real-time dashboard** | Socket.IO WebSocket, same-port custom HTTP server |
-| ✅ **Database design quality** | Unique constraints at DB level, indexed for performance |
-| ✅ **Code clarity** | Layered architecture: services → API routes → components |
-
----
 
 ## 📁 Project Structure
 
