@@ -4,7 +4,7 @@ export const createLeadSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Name must be at least 2 characters")
+    .min(1, "Name is required")
     .max(255, "Name must not exceed 255 characters"),
 
   phone: z

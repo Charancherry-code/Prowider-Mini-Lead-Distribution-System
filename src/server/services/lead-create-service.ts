@@ -1,4 +1,3 @@
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/server/db/prisma";
 import { CreateLeadInput } from "@/server/utils/lead-validation";
 import { allocateLeadToProviders } from "@/server/services/provider-allocation-service";
@@ -24,6 +23,15 @@ export type CreateLeadResponse =
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: string }).code === "P2002"
+  );
 }
 
 /**
@@ -86,7 +94,7 @@ export async function createLead(
       allocatedProviders: allocation.allocatedProviders,
     };
   } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+    if (isUniqueConstraintError(error)) {
       return { success: false, error: "DUPLICATE_LEAD" };
     }
     console.error("Failed to create lead:", error);
