@@ -14,10 +14,10 @@
 
 <br/>
 
-[**🌐 Live Demo**](https://your-app.railway.app) &nbsp;|&nbsp;
-[**📋 Request Service**](https://your-app.railway.app/request-service) &nbsp;|&nbsp;
-[**📊 Dashboard**](https://your-app.railway.app/dashboard) &nbsp;|&nbsp;
-[**🧪 Test Tools**](https://your-app.railway.app/test-tools)
+[**🌐 Live Demo**](https://provider-production-28fd.up.railway.app) &nbsp;|&nbsp;
+[**📋 Request Service**](https://provider-production-28fd.up.railway.app/request-service) &nbsp;|&nbsp;
+[**📊 Dashboard**](https://provider-production-28fd.up.railway.app/dashboard) &nbsp;|&nbsp;
+[**🧪 Test Tools**](https://provider-production-28fd.up.railway.app/test-tools)
 
 </div>
 
@@ -57,12 +57,14 @@ This system simulates a real-world lead generation and distribution platform. Wh
 
 ## 🌐 Live Demo
 
+**🚀 App is live at:** https://provider-production-28fd.up.railway.app
+
 | Page | URL | Purpose |
 |------|-----|---------|
-| Home | `https://your-app.railway.app/` | Navigation hub |
-| Customer Form | `https://your-app.railway.app/request-service` | Submit service enquiries |
-| Provider Dashboard | `https://your-app.railway.app/dashboard` | Live quota & lead tracking |
-| Test Tools | `https://your-app.railway.app/test-tools` | Webhook & concurrency tests |
+| Home | https://provider-production-28fd.up.railway.app/ | Navigation hub |
+| Customer Form | https://provider-production-28fd.up.railway.app/request-service | Submit service enquiries |
+| Provider Dashboard | https://provider-production-28fd.up.railway.app/dashboard | Live quota & lead tracking |
+| Test Tools | https://provider-production-28fd.up.railway.app/test-tools | Webhook & concurrency tests |
 
 ---
 
@@ -396,52 +398,108 @@ Generates N leads concurrently (in-process) for stress testing.
 
 ## ⚡ Quick Start
 
-### Docker (Recommended — Zero Setup)
+### Option 1: View Live Demo (Instant)
 
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+**🚀 Live app:** https://provider-production-28fd.up.railway.app
 
-docker compose up --build
-```
-
-That's it. Docker will:
-1. Start PostgreSQL 16
-2. Wait for DB health check
-3. Run `prisma db push` (schema)
-4. Run `prisma db seed` (3 services, 8 providers)
-5. Start the dev server
-
-| URL | Purpose |
-|-----|---------|
-| http://localhost:3000 | Home |
-| http://localhost:3000/request-service | Customer form |
-| http://localhost:3000/dashboard | Provider dashboard |
-| http://localhost:3000/test-tools | Test panel |
+No setup required — click and explore all features immediately.
 
 ---
 
-### Local (Manual)
+### Option 2: Run Locally with Docker (5 minutes)
 
-**Prerequisites:** Node.js 20+, PostgreSQL 16 running
+**Prerequisites:** Docker and Docker Compose installed
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+# 1. Clone the repository
+git clone https://github.com/Charancherry-code/Prowider-Mini-Lead-Distribution-System.git
+cd Prowider-Mini-Lead-Distribution-System
+
+# 2. Start the application (one command)
+docker compose up --build
+```
+
+**That's it!** Docker will automatically:
+1. Start PostgreSQL 16 database
+2. Wait for database health check
+3. Apply database schema (`prisma db push`)
+4. Seed test data (3 services, 8 providers)
+5. Start the development server with hot reload
+
+**Access the app:**
+| URL | Purpose |
+|-----|---------|
+| http://localhost:3000 | Home page |
+| http://localhost:3000/request-service | Submit service enquiries |
+| http://localhost:3000/dashboard | Real-time provider dashboard |
+| http://localhost:3000/test-tools | Test webhook & concurrency |
+
+**To stop:** `Ctrl+C` then `docker compose down`
+
+---
+
+### Option 3: Production Docker Build (Evaluators)
+
+For testing the production Docker image (same as deployed on Railway):
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Charancherry-code/Prowider-Mini-Lead-Distribution-System.git
+cd Prowider-Mini-Lead-Distribution-System
+
+# 2. Create production environment file
+cp .env.example .env.local
+# Edit .env.local with your database URL (or use the docker-compose setup below)
+
+# 3. Build production image
+docker build -t prowider-app .
+
+# 4. Run with PostgreSQL
+docker run -d --name postgres-db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=lead_distribution \
+  -p 5432:5432 \
+  postgres:16-alpine
+
+# Wait 10 seconds for DB to start, then:
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://postgres:postgres@host.docker.internal:5432/lead_distribution?schema=public" \
+  -e DIRECT_URL="postgresql://postgres:postgres@host.docker.internal:5432/lead_distribution?schema=public" \
+  -e NEXT_PUBLIC_APP_URL="http://localhost:3000" \
+  -e SOCKET_IO_PATH="/socket.io" \
+  -e PORT="3000" \
+  -e NODE_ENV="production" \
+  prowider-app
+```
+
+**Or use the simpler docker-compose approach above** — it handles networking automatically.
+
+---
+
+### Local Development (Manual Setup)
+
+**Prerequisites:** Node.js 20+, PostgreSQL 16 running locally
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/Charancherry-code/Prowider-Mini-Lead-Distribution-System.git
+cd Prowider-Mini-Lead-Distribution-System
 npm install
 
 # 2. Configure environment
 cp .env.example .env.local
-# Edit .env.local — set your DATABASE_URL
+# Edit .env.local — set your DATABASE_URL to your local PostgreSQL instance
 
-# 3. Push schema and seed data
-npx prisma db push
-npm run prisma:seed
+# 3. Setup database
+npx prisma db push    # Apply schema
+npm run prisma:seed   # Seed test data
 
 # 4. Start development server
-npm run dev
+npm run dev           # Runs on http://localhost:3000
 ```
+
+**Note:** The app uses a custom `server.ts` that combines Next.js + Socket.IO on the same port. Use `npm run dev`, not `next dev`.
 
 ---
 
@@ -464,6 +522,10 @@ npm run lint          # ESLint
 
 ### Deploy to Railway (Recommended)
 
+**✅ Already deployed at:** https://provider-production-28fd.up.railway.app
+
+To deploy your own instance:
+
 ```bash
 # 1. Push to GitHub
 git push -u origin main
@@ -479,7 +541,7 @@ git push -u origin main
 ```env
 DATABASE_URL="postgresql://user:pass@host:5432/dbname?schema=public"
 DIRECT_URL="postgresql://user:pass@host:5432/dbname?schema=public"
-NEXT_PUBLIC_APP_URL="https://your-app.railway.app"
+NEXT_PUBLIC_APP_URL="https://provider-production-28fd.up.railway.app"
 SOCKET_IO_PATH="/socket.io"
 PORT="3000"
 NODE_ENV="production"
