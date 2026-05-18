@@ -3,6 +3,7 @@ FROM node:20-bookworm-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install system deps
 RUN apt-get update -y && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
 
 # ── deps ──────────────────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
