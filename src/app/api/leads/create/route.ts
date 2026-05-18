@@ -47,11 +47,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       };
 
       const messages: Record<string, string> = {
-        DUPLICATE_LEAD: `A lead with this phone already exists for the selected service`,
-        NO_AVAILABLE_PROVIDERS:
-          "No providers with remaining quota are available for this service",
-        MANDATORY_PROVIDER_QUOTA_EXCEEDED:
-          "A mandatory provider has no remaining quota for this month",
+        DUPLICATE_LEAD: "A lead with this phone already exists for the selected service",
+        NO_AVAILABLE_PROVIDERS: "No providers with remaining quota are available",
+        MANDATORY_PROVIDER_QUOTA_EXCEEDED: "A mandatory provider has no remaining quota",
         ALLOCATION_FAILED: result.message ?? "Lead allocation failed",
         SERVICE_NOT_FOUND: "Service not found",
         DATABASE_ERROR: "Database error while creating lead",

@@ -32,7 +32,9 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: sh -c "npx prisma db push && npx prisma db seed && npm run dev"
+      - app_next_cache:/app/.next
+    command: sh scripts/docker-start.sh
 
 volumes:
   postgres_data:
+  app_next_cache:
