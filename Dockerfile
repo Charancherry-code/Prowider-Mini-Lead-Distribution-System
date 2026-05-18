@@ -18,8 +18,11 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build Next.js (DATABASE_URL is not needed at build time — only at runtime)
-RUN npm run build
+# Build Next.js — DATABASE_URL is only needed at runtime, but env.ts validates
+# it at import time, so we pass a dummy value to satisfy the build-time check.
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+    DIRECT_URL="postgresql://build:build@localhost:5432/build" \
+    npm run build
 
 # ── runner ────────────────────────────────────────────────────────────────────
 FROM base AS runner
