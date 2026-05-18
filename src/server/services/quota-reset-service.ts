@@ -128,22 +128,3 @@ export async function processQuotaResetWebhook(
     };
   }
 }
-
-/**
- * Get quota reset webhook history
- */
-export async function getQuotaResetWebhookHistory(limit = 10) {
-  const events = await prisma.quotaResetWebhook.findMany({
-    select: {
-      id: true,
-      externalId: true,
-      status: true,
-      payload: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
-
-  return events;
-}
